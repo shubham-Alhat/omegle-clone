@@ -5,28 +5,7 @@ import { useEffect, useRef, useState } from "react";
 export default function ChatPage() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
-  const [status, setStatus] = useState("idle");
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
-      } catch (error) {
-        console.log(error);
-      }
-    })();
-  }, []);
-
-  function findNext() {
-    setStatus("searching");
-    window.setTimeout(() => setStatus("idle"), 900);
-  }
+  const streamRef = useRef(null);
 
   return (
     <main className="min-h-screen bg-black px-4 py-12 text-white sm:px-8 sm:py-14">
@@ -35,7 +14,7 @@ export default function ChatPage() {
           Omegle Clone
         </h1>
         <p className="mt-6 text-lg leading-7 sm:text-xl">
-          Status: <span className="font-bold">{status}</span>
+          Status: <span className="font-bold">{"connecting"}</span>
         </p>
 
         <section
@@ -63,7 +42,6 @@ export default function ChatPage() {
 
         <button
           type="button"
-          onClick={findNext}
           className="mt-5 rounded-lg bg-neutral-950 px-6 py-2.5 text-base text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-950 cursor-pointer"
         >
           Next
