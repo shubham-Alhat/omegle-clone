@@ -5,8 +5,9 @@ import { useEffect, useRef } from "react";
 export default function ChatPage() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
-  const streamRef = useRef(null);
+  const localStreamRef = useRef(null);
 
+  // initialized the access of mic/camera
   useEffect(() => {
     let ignore = false;
 
@@ -26,7 +27,7 @@ export default function ChatPage() {
           return;
         }
 
-        streamRef.current = stream;
+        localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
         console.log(
@@ -42,15 +43,30 @@ export default function ChatPage() {
     return () => {
       ignore = true;
       console.log("cleanup: unmounting, stopping camera");
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => {
           t.stop();
           console.log(`Stopped track: ${t.kind} (${t.label})`);
         });
-        streamRef.current = null;
+        localStreamRef.current = null;
       }
     };
   }, []);
+
+  const connectToSignalingServer = () => {
+    const socket = new WebSocket("ws://localhost:8000/ws");
+    socket.onopen = () => {
+      console.log("socket connected..");
+    };
+
+    socket.onclose = () => {
+      console.log("connection closed");
+    };
+
+    socket.onerror = (e) => {
+      console.log("websocket connection error : ", e);
+    };
+  };
 
   return (
     <main className="min-h-screen bg-black px-4 py-12 text-white sm:px-8 sm:py-14">
