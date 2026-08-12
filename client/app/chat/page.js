@@ -1,11 +1,34 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export default function ChatPage() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const wsRef = useRef(null);
+
+  // initialize the ws connection
+  const connectToSignalingServer = useCallback(() => {
+    if (wsRef.current) {
+      console.log("already connected..");
+      return;
+    }
+    const socket = new WebSocket("ws://localhost:8000/ws");
+    wsRef.current = socket;
+
+    socket.onclose = () => {
+      console.log("connection closed..");
+    };
+
+    socket.onerror = (e) => {
+      console.log("ws error : ", e);
+    };
+
+    socket.onopen = (e) => {
+      console.log("connection opened : ", e);
+    };
+  }, []);
 
   // initialized the access of mic/camera
   useEffect(() => {
@@ -39,6 +62,7 @@ export default function ChatPage() {
       }
     }
     startCamera();
+    connectToSignalingServer();
 
     return () => {
       ignore = true;
@@ -52,21 +76,6 @@ export default function ChatPage() {
       }
     };
   }, []);
-
-  const connectToSignalingServer = () => {
-    const socket = new WebSocket("ws://localhost:8000/ws");
-    socket.onopen = () => {
-      console.log("socket connected..");
-    };
-
-    socket.onclose = () => {
-      console.log("connection closed");
-    };
-
-    socket.onerror = (e) => {
-      console.log("websocket connection error : ", e);
-    };
-  };
 
   return (
     <main className="min-h-screen bg-black px-4 py-12 text-white sm:px-8 sm:py-14">
