@@ -55,7 +55,24 @@ wss.on("connection", (ws, req) => {
 
   // eventRouter
   ws.on("message", (rawData) => {
-    console.log("rawData : ", JSON.parse(rawData.toString()));
+    let data;
+    try {
+      data = JSON.parse(rawData.toString());
+    } catch (error) {
+      return;
+    }
+
+    const partner = partners.get(ws);
+
+    switch (data.type) {
+      case "offer":
+      case "answer":
+      case "ice-candidate":
+      case "chat":
+        if (partner) send(partner, data);
+        console.log(data);
+        break;
+    }
   });
 });
 

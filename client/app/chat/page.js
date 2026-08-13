@@ -10,20 +10,15 @@ export default function ChatPage() {
   const localStreamRef = useRef(null);
   const wsRef = useRef(null);
   const pcRef = useRef(null);
+  const pendingCandidatesRef = useRef([]);
 
   const send = useCallback((data) => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
   }, []);
 
-  const cleanupPeer = () => {
-    pcRef.current.close();
-    pcRef.current = null;
-    pendingCandidatesRef.current = [];
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-  };
-
   const createPeerConnection = useCallback(() => {
+    console.log("PC callback runs", Date.now());
     const pc = new RTCPeerConnection(ICE_SERVERS);
     pcRef.current = pc;
 
@@ -94,9 +89,25 @@ export default function ChatPage() {
           if (data.initiator) {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-            console.log("offer at start : ", offer);
             send({ type: "offer", sdp: offer });
           }
+          break;
+
+        case "offer":
+          const pc2 = pcRef.current;
+          if (!pc2) {
+            console.log("pc2 undefined or null");
+            break;
+          }
+          await pc2.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          for (const c of pendingCandidatesRef.current)
+            await pc2.addIceCandidate(c);
+          pendingCandidatesRef.current = [];
+
+          const answer = await pc2.createAnswer();
+          await pc2.setLocalDescription(answer);
+          send({ type: "answer", sdp: answer });
+
           break;
 
         default:
@@ -132,6 +143,7 @@ export default function ChatPage() {
           "Active stream tracks:",
           stream.getTracks().map((t) => `${t.kind}:${t.id}`),
         );
+        // connecting to ws server at very last to avoid incomplete sdp generation
         connectToSignalingServer();
       } catch (error) {
         console.log(error);
