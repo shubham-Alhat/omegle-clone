@@ -28,6 +28,12 @@ export default function ChatPage() {
     socket.onopen = (e) => {
       console.log("connection opened : ", e);
     };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("ws data on client : ", data);
+      console.log("ws data type : ", data.type);
+    };
   }, []);
 
   // initialized the access of mic/camera
