@@ -1,12 +1,61 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { ICE_SERVERS } from "@/lib/webrtc";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function ChatPage() {
+  const [status, setStatus] = useState("idle");
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const wsRef = useRef(null);
+  const pcRef = useRef(null);
+
+  const send = useCallback((data) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
+  }, []);
+
+  const cleanupPeer = () => {
+    pcRef.current.close();
+    pcRef.current = null;
+    pendingCandidatesRef.current = [];
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+  };
+
+  const createPeerConnection = useCallback(() => {
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    pcRef.current = pc;
+
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => {
+        pc.addTrack(track, localStreamRef.current);
+      });
+    }
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate)
+        send({ type: "ice-candidate", candidate: event.candidate });
+    };
+
+    pc.ontrack = (event) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+      setStatus("connected");
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (
+        pc.connectionState === "failed" ||
+        pc.connectionState === "disconnected"
+      ) {
+        setStatus("partner-left");
+      }
+    };
+
+    return pc;
+  }, [send]);
 
   // initialize the ws connection
   const connectToSignalingServer = useCallback(() => {
@@ -19,6 +68,7 @@ export default function ChatPage() {
 
     socket.onclose = () => {
       console.log("connection closed..");
+      wsRef.current = null;
     };
 
     socket.onerror = (e) => {
@@ -29,10 +79,29 @@ export default function ChatPage() {
       console.log("connection opened : ", e);
     };
 
-    socket.onmessage = (event) => {
+    socket.onmessage = async (event) => {
       const data = JSON.parse(event.data);
       console.log("ws data on client : ", data);
-      console.log("ws data type : ", data.type);
+
+      switch (data.type) {
+        case "waiting":
+          setStatus("waiting for partner");
+          break;
+        case "matched":
+          setStatus("match found, trying to connect..");
+
+          const pc = createPeerConnection();
+          if (data.initiator) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            console.log("offer at start : ", offer);
+            send({ type: "offer", sdp: offer });
+          }
+          break;
+
+        default:
+          break;
+      }
     };
   }, []);
 
@@ -63,12 +132,12 @@ export default function ChatPage() {
           "Active stream tracks:",
           stream.getTracks().map((t) => `${t.kind}:${t.id}`),
         );
+        connectToSignalingServer();
       } catch (error) {
         console.log(error);
       }
     }
     startCamera();
-    connectToSignalingServer();
 
     return () => {
       ignore = true;
@@ -90,7 +159,7 @@ export default function ChatPage() {
           Omegle Clone
         </h1>
         <p className="mt-6 text-lg leading-7 sm:text-xl">
-          Status: <span className="font-bold">{"connecting"}</span>
+          Status: <span className="font-bold">{status}</span>
         </p>
 
         <section

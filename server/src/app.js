@@ -55,7 +55,7 @@ wss.on("connection", (ws, req) => {
 
   // eventRouter
   ws.on("message", (rawData) => {
-    console.log("rawData : ", JSON.parse(rawData));
+    console.log("rawData : ", JSON.parse(rawData.toString()));
   });
 });
 
