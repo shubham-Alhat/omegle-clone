@@ -82,7 +82,7 @@ export default function ChatPage() {
         case "waiting":
           setStatus("waiting for partner");
           break;
-        case "matched":
+        case "matched": {
           setStatus("match found, trying to connect..");
 
           const pc = createPeerConnection();
@@ -92,29 +92,52 @@ export default function ChatPage() {
             send({ type: "offer", sdp: offer });
           }
           break;
+        }
 
-        case "offer":
-          const pc2 = pcRef.current;
-          if (!pc2) {
-            console.log("pc2 undefined or null");
+        case "offer": {
+          const pc = pcRef.current;
+          if (!pc) {
+            console.log("--------pc undefined or null");
             break;
           }
-          await pc2.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
           for (const c of pendingCandidatesRef.current)
-            await pc2.addIceCandidate(c);
+            await pc.addIceCandidate(c);
           pendingCandidatesRef.current = [];
 
-          const answer = await pc2.createAnswer();
-          await pc2.setLocalDescription(answer);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
           send({ type: "answer", sdp: answer });
 
           break;
+        }
+
+        case "answer": {
+          const pc = pcRef.current;
+          if (!pc) break;
+          await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          for (const c of pendingCandidatesRef.current)
+            await pc.addIceCandidate(c);
+          pendingCandidatesRef.current = [];
+          break;
+        }
+
+        case "ice-candidate": {
+          const pc = pcRef.current;
+          if (!pc) break;
+          if (pc.remoteDescription) {
+            await pc.addIceCandidate(data.candidate);
+          } else {
+            pendingCandidatesRef.current.push(data.candidate);
+          }
+          break;
+        }
 
         default:
           break;
       }
     };
-  }, []);
+  }, [createPeerConnection, send]);
 
   // initialized the access of mic/camera
   useEffect(() => {
