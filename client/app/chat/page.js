@@ -1,6 +1,7 @@
 "use client";
 
 import { ICE_SERVERS } from "@/lib/webrtc";
+import { actionAsyncStorage } from "next/dist/server/app-render/action-async-storage.external";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function ChatPage() {
@@ -59,6 +60,7 @@ export default function ChatPage() {
       return;
     }
     const socket = new WebSocket("wss://omegle-clone-xlhb.onrender.com/ws");
+
     wsRef.current = socket;
 
     socket.onclose = () => {
@@ -196,6 +198,8 @@ export default function ChatPage() {
         });
         localStreamRef.current = null;
       }
+
+      if (wsRef.current) wsRef.current.close();
     };
   }, []);
 
@@ -211,6 +215,21 @@ export default function ChatPage() {
 
     send({ type: "next" });
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    pendingCandidatesRef.current = [];
+  };
+
+  const handleClear = async () => {
+    const pass = prompt("Enter Pass keys");
+
+    if (pass.trim() === "iammillionaire") {
+      const res = await fetch(
+        "https://omegle-clone-xlhb.onrender.com/clear-memory",
+      );
+
+      console.log(res.json());
+    } else {
+      alert("sorry! you are not allowed to do this 😕");
+    }
   };
 
   return (
@@ -253,6 +272,18 @@ export default function ChatPage() {
         >
           Next
         </button>
+      </div>
+      <div className="w-full flex justify-center items-center">
+        <button
+          type="button"
+          onClick={handleClear}
+          className="mt-5 rounded-lg bg-neutral-950 px-6 py-2.5 text-base text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-950 cursor-pointer"
+        >
+          clear
+        </button>
+      </div>
+      <div className="text-red-400 w-full flex justify-center items-center mt-2">
+        only admin can do this
       </div>
     </main>
   );

@@ -73,6 +73,40 @@ wss.on("connection", (ws, req) => {
         console.log(data);
         break;
       case "next":
+        const partner = partners.get(ws);
+        if (partner) {
+          partners.delete(partner);
+          partners.delete(ws);
+          partner.send({ type: "partner-left" });
+        }
+
+        // finding next partner
+        if (waitingPool.length > 0) {
+          const partnerWs = waitingPool.shift();
+          if (partnerWs) {
+            // pair them up
+            partners.set(partnerWs, ws);
+            partners.set(ws, partnerWs);
+
+            // notify both users, they find mathced
+            send(partnerWs, { type: "matched", initiator: false });
+            send(ws, { type: "matched", initiator: true });
+          }
+        } else {
+          // keep ws for waiting
+          waitingPool.push(ws);
+          send(ws, { type: "waiting" });
+        }
+
+        // keep the other peer also in waiting list
+        waitingPool.push(partner);
+        send(partner, { type: "waiting" });
+
+        // status of partner-MAP and waiting Pool
+        console.log("Map size : ", partners.size);
+        console.log("array length : ", waitingPool.length);
+
+        break;
     }
   });
 });
@@ -90,5 +124,12 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.get("/clear-memory", (req, res) => {
+  waitingPool.length = 0;
+  partners.clear();
+  console.log("map : ", partners);
+  console.log("waitingPool : ", waitingPool);
+  return res.json({ status: "clear the memory space" });
+});
 
 export default server;
