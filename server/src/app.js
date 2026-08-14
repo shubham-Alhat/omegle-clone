@@ -72,6 +72,7 @@ wss.on("connection", (ws, req) => {
         if (partner) send(partner, data);
         console.log(data);
         break;
+      case "next":
     }
   });
 });

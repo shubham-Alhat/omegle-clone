@@ -133,6 +133,18 @@ export default function ChatPage() {
           break;
         }
 
+        case "partner-left":
+          setStatus("partner-left");
+          if (pcRef.current) {
+            pcRef.current.close();
+            pcRef.current = null;
+          } else {
+            console.log("undefined pc --- ");
+            pcRef.current = null;
+          }
+
+          break;
+
         default:
           break;
       }
@@ -187,6 +199,20 @@ export default function ChatPage() {
     };
   }, []);
 
+  const handleNext = () => {
+    setStatus("waiting for partner");
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    } else {
+      console.log("undefined pc --- ");
+      pcRef.current = null;
+    }
+
+    send({ type: "next" });
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+  };
+
   return (
     <main className="min-h-screen bg-black px-4 py-12 text-white sm:px-8 sm:py-14">
       <div className="mx-auto w-full max-w-[1085px]">
@@ -222,6 +248,7 @@ export default function ChatPage() {
 
         <button
           type="button"
+          onClick={handleNext}
           className="mt-5 rounded-lg bg-neutral-950 px-6 py-2.5 text-base text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-950 cursor-pointer"
         >
           Next
