@@ -58,7 +58,7 @@ export default function ChatPage() {
       console.log("already connected..");
       return;
     }
-    const socket = new WebSocket("ws://localhost:8000/ws");
+    const socket = new WebSocket("wss://omegle-clone-xlhb.onrender.com/ws");
     wsRef.current = socket;
 
     socket.onclose = () => {
